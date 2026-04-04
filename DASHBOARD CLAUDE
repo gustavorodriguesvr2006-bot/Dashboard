@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard WhatsApp — Gustavo Rodrigues</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;}
+  .container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+  .header-left h1{font-size:20px;font-weight:600;color:#1a1a1a;}
+  .header-left p{font-size:12px;color:#888780;margin-top:3px;}
+  .refresh-btn{font-size:12px;padding:7px 16px;border-radius:20px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer;font-family:inherit;}
+  .refresh-btn:hover{background:#f1efe8;}
+  .nav{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+  .ntab{font-size:13px;padding:7px 18px;border-radius:20px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer;font-family:inherit;}
+  .ntab.active{background:#1D9E75;color:#fff;border-color:#1D9E75;font-weight:500;}
+  .section{display:none;}.section.active{display:block;}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+  .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:repeat(2,1fr);}.g2{grid-template-columns:1fr;}}
+  @media(max-width:400px){.g4{grid-template-columns:1fr;}}
+  .mc{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e8e6e0;}
+  .mc .lbl{font-size:11px;color:#888780;margin-bottom:6px;}
+  .mc .val{font-size:28px;font-weight:600;color:#1a1a1a;line-height:1;}
+  .mc .sub{font-size:11px;color:#b4b2a9;margin-top:5px;}
+  .conv-bar{height:6px;background:#f1efe8;border-radius:3px;overflow:hidden;margin-top:8px;}
+  .conv-fill{height:100%;border-radius:3px;background:#1D9E75;transition:width .4s;}
+  .card{background:#fff;border:1px solid #e8e6e0;border-radius:12px;padding:16px 20px;margin-bottom:16px;}
+  .card-title{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:14px;}
+  .period-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .ptab{font-size:12px;padding:5px 14px;border-radius:20px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer;font-family:inherit;}
+  .ptab.active{background:#e6f1fb;color:#0c447c;border-color:#b5d4f4;font-weight:500;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{font-size:11px;font-weight:500;color:#888780;text-align:left;padding:0 10px 10px 0;border-bottom:1px solid #e8e6e0;}
+  td{padding:10px 10px 10px 0;border-bottom:1px solid #f1efe8;color:#1a1a1a;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;}
+  .b-green{background:#e1f5ee;color:#085041;}
+  .b-gray{background:#f1efe8;color:#5f5e5a;}
+  .b-amber{background:#faeeda;color:#633806;}
+  .search-input{font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid #d3d1c7;width:180px;outline:none;font-family:inherit;}
+  .search-input:focus{border-color:#1D9E75;}
+  .empty{text-align:center;padding:2rem;color:#b4b2a9;font-size:13px;}
+  .tip-box{background:#e1f5ee;border-radius:10px;padding:14px 16px;font-size:12px;color:#085041;line-height:1.6;}
+  .tip-box strong{font-weight:600;}
+  .error-box{background:#fcebeb;border-radius:10px;padding:14px 16px;font-size:12px;color:#501313;margin-bottom:16px;display:none;}
+  .loading-state{text-align:center;padding:3rem;color:#888780;font-size:13px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle;}
+  .dot-green{background:#1D9E75;}.dot-gray{background:#b4b2a9;}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Dashboard WhatsApp</h1>
+      <p id="lastUpdate">Carregando dados...</p>
+    </div>
+    <button class="refresh-btn" onclick="loadData()">Atualizar dados</button>
+  </div>
+
+  <div id="errorBox" class="error-box"></div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="showTab('overview',this)">Visão geral</button>
+    <button class="ntab" onclick="showTab('leads',this)">Leads</button>
+    <button class="ntab" onclick="showTab('vendas',this)">Vendas</button>
+  </div>
+
+  <div id="overview" class="section active">
+    <div class="period-tabs">
+      <button class="ptab active" onclick="setPeriod('dia',this)">Hoje</button>
+      <button class="ptab" onclick="setPeriod('semana',this)">Esta semana</button>
+      <button class="ptab" onclick="setPeriod('mes',this)">Este mês</button>
+      <button class="ptab" onclick="setPeriod('total',this)">Total</button>
+    </div>
+    <div class="g4" id="metricsGrid">
+      <div class="mc"><div class="lbl">Carregando...</div><div class="val">—</div></div>
+      <div class="mc"><div class="lbl">Carregando...</div><div class="val">—</div></div>
+      <div class="mc"><div class="lbl">Carregando...</div><div class="val">—</div></div>
+      <div class="mc"><div class="lbl">Carregando...</div><div class="val">—</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Leads únicos por dia — últimos 14 dias</div>
+        <div style="position:relative;height:200px;"><canvas id="chartDia"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Leads vs vendas por semana</div>
+        <div style="position:relative;height:200px;"><canvas id="chartLV"></canvas></div>
+        <div id="legendLV" style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:#888780;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="leads" class="section">
+    <div class="period-tabs">
+      <button class="ptab active" onclick="setPeriodLeads('dia',this)">Hoje</button>
+      <button class="ptab" onclick="setPeriodLeads('semana',this)">Esta semana</button>
+      <button class="ptab" onclick="setPeriodLeads('mes',this)">Este mês</button>
+      <button class="ptab" onclick="setPeriodLeads('total',this)">Todos</button>
+    </div>
+    <div class="g3" id="leadsMetrics"></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin:0;" id="leadsTableTitle">Leads de hoje</div>
+        <input class="search-input" id="searchInput" placeholder="Buscar nome..." oninput="filterTable()">
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Etapa</th><th>Data / hora</th></tr></thead>
+          <tbody id="leadsBody"><tr><td colspan="4" class="loading-state">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="vendas" class="section">
+    <div class="g3" id="vendasMetrics"></div>
+    <div class="card">
+      <div class="card-title">Todas as vendas — etapa "COMPROU"</div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Data</th></tr></thead>
+          <tbody id="vendasBody"><tr><td colspan="3" class="loading-state">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tip-box">
+      Para registrar uma venda: abra a planilha Google Sheets, encontre o lead pelo nome e preencha a coluna <strong>etapa</strong> com <strong>COMPROU</strong>. O dashboard atualiza automaticamente a cada 60 segundos.
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SHEET_ID='1W979lR1IlfSDZJEQbbC_ZCcK0HSjU6WokIqZjziYEm8';
+const API=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=P%C3%A1gina1`;
+let rows=[],period='dia',periodLeads='dia',charts={};
+
+function showTab(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function setPeriod(p,btn){
+  period=p;
+  document.querySelectorAll('#overview .period-tabs .ptab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOverview();
+}
+function setPeriodLeads(p,btn){
+  periodLeads=p;
+  document.querySelectorAll('#leads .period-tabs .ptab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLeads();
+}
+function parseDate(v){
+  if(!v)return null;
+  if(typeof v==='string')return new Date(v);
+  const m=String(v).match(/Date\((\d+),(\d+),(\d+)/);
+  if(m)return new Date(+m[1],+m[2],+m[3]);
+  return null;
+}
+function startOf(p){
+  const now=new Date();
+  if(p==='dia'){const d=new Date(now);d.setHours(0,0,0,0);return d;}
+  if(p==='semana'){const d=new Date(now);d.setDate(d.getDate()-d.getDay());d.setHours(0,0,0,0);return d;}
+  if(p==='mes')return new Date(now.getFullYear(),now.getMonth(),1);
+  return new Date(0);
+}
+function filterByPeriod(data,p){
+  if(p==='total')return data;
+  const s=startOf(p);
+  return data.filter(r=>{const d=parseDate(r.data);return d&&d>=s;});
+}
+function uniqueLeads(data){
+  const seen=new Set();
+  return data.filter(r=>{
+    const k=(r.nome||'').toLowerCase().trim();
+    if(!k||seen.has(k))return false;
+    seen.add(k);return true;
+  });
+}
+
+async function loadData(){
+  document.getElementById('lastUpdate').textContent='Atualizando...';
+  document.getElementById('errorBox').style.display='none';
+  try{
+    const res=await fetch(API);
+    const txt=await res.text();
+    const json=JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    rows=(json.table.rows||[]).map(r=>({
+      data:r.c[0]?.v||'',
+      nome:r.c[1]?.v||'',
+      telefone:r.c[2]?.v||'',
+      etapa:(r.c[3]?.v||'').toString().trim().toUpperCase(),
+    })).filter(r=>r.nome);
+    document.getElementById('lastUpdate').textContent=`Atualizado às ${new Date().toLocaleTimeString('pt-BR')} — ${rows.length} registros`;
+    renderAll();
+  }catch(e){
+    document.getElementById('errorBox').style.display='block';
+    document.getElementById('errorBox').textContent='Erro ao carregar dados da planilha. Verifique se ela está pública (qualquer pessoa com o link pode visualizar).';
+    document.getElementById('lastUpdate').textContent='Erro ao carregar';
+  }
+}
+
+function renderAll(){renderOverview();renderLeads();renderVendas();}
+
+function renderOverview(){
+  const f=filterByPeriod(rows,period);
+  const u=uniqueLeads(f);
+  const v=uniqueLeads(f.filter(r=>r.etapa==='COMPROU'));
+  const conv=u.length>0?Math.round(v.length/u.length*100):0;
+  const lbl={dia:'hoje',semana:'esta semana',mes:'este mês',total:'no total'}[period];
+  document.getElementById('metricsGrid').innerHTML=`
+    <div class="mc"><div class="lbl">Leads ${lbl}</div><div class="val">${u.length}</div><div class="sub">${f.length} mensagens recebidas</div></div>
+    <div class="mc"><div class="lbl">Vendas ${lbl}</div><div class="val">${v.length}</div><div class="sub">etapa = COMPROU</div></div>
+    <div class="mc"><div class="lbl">Taxa de conversão</div><div class="val">${conv}%</div><div class="conv-bar"><div class="conv-fill" style="width:${conv}%"></div></div></div>
+    <div class="mc"><div class="lbl">Sem etapa definida</div><div class="val">${u.filter(r=>!r.etapa).length}</div><div class="sub">aguardando status</div></div>
+  `;
+  buildChartDia();
+  buildChartLV();
+}
+
+function buildChartDia(){
+  const now=new Date();
+  const labels=[],data=[];
+  const uniqByDay={};
+  rows.forEach(r=>{
+    const d=parseDate(r.data);if(!d)return;
+    const k=d.toLocaleDateString('pt-BR');
+    if(!uniqByDay[k])uniqByDay[k]=new Set();
+    uniqByDay[k].add((r.nome||'').toLowerCase().trim());
+  });
+  for(let i=13;i>=0;i--){
+    const d=new Date(now);d.setDate(d.getDate()-i);
+    const k=d.toLocaleDateString('pt-BR');
+    labels.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    data.push(uniqByDay[k]?uniqByDay[k].size:0);
+  }
+  if(charts.dia)charts.dia.destroy();
+  charts.dia=new Chart(document.getElementById('chartDia'),{
+    type:'bar',
+    data:{labels,datasets:[{data,backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780',maxRotation:45,maxTicksLimit:7}},
+        y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780'},beginAtZero:true}}}
+  });
+}
+
+function buildChartLV(){
+  const now=new Date();
+  const labels=[],leadsD=[],vendasD=[];
+  for(let i=5;i>=0;i--){
+    const from=new Date(now);from.setDate(from.getDate()-i*7-6);from.setHours(0,0,0,0);
+    const to=new Date(now);to.setDate(to.getDate()-i*7);to.setHours(23,59,59,999);
+    const lbl=from.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    labels.push(lbl);
+    const inRange=rows.filter(r=>{const d=parseDate(r.data);return d&&d>=from&&d<=to;});
+    leadsD.push(uniqueLeads(inRange).length);
+    vendasD.push(uniqueLeads(inRange.filter(r=>r.etapa==='COMPROU')).length);
+  }
+  if(charts.lv)charts.lv.destroy();
+  charts.lv=new Chart(document.getElementById('chartLV'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Leads',data:leadsD,backgroundColor:'#9FE1CB',borderRadius:3,borderSkipped:false},
+      {label:'Vendas',data:vendasD,backgroundColor:'#085041',borderRadius:3,borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780'}},
+        y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780'},beginAtZero:true}}}
+  });
+  document.getElementById('legendLV').innerHTML=`
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#9FE1CB;display:inline-block;"></span>Leads</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#085041;display:inline-block;"></span>Vendas</span>`;
+}
+
+function renderLeads(){
+  const f=filterByPeriod(rows,periodLeads);
+  const u=uniqueLeads(f);
+  const lbl={dia:'hoje',semana:'esta semana',mes:'este mês',total:'total'}[periodLeads];
+  document.getElementById('leadsTableTitle').textContent=`Leads — ${lbl}`;
+  document.getElementById('leadsMetrics').innerHTML=`
+    <div class="mc"><div class="lbl">Leads únicos ${lbl}</div><div class="val">${u.length}</div></div>
+    <div class="mc"><div class="lbl">Mensagens ${lbl}</div><div class="val">${f.length}</div></div>
+    <div class="mc"><div class="lbl">Com etapa definida</div><div class="val">${u.filter(r=>r.etapa).length}</div></div>
+  `;
+  renderLeadsTable(f);
+}
+
+function renderLeadsTable(data){
+  const s=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  const f=s?data.filter(r=>r.nome.toLowerCase().includes(s)):data;
+  const u=uniqueLeads(f).reverse().slice(0,100);
+  document.getElementById('leadsBody').innerHTML=u.length?u.map(r=>{
+    const d=parseDate(r.data);
+    const ds=d?d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—';
+    const badge=r.etapa==='COMPROU'?`<span class="badge b-green"><span class="dot dot-green"></span>COMPROU</span>`:r.etapa?`<span class="badge b-amber">${r.etapa}</span>`:`<span class="badge b-gray">—</span>`;
+    return `<tr><td style="font-weight:500;">${r.nome}</td><td style="color:#888780;font-size:12px;">${r.telefone||'—'}</td><td>${badge}</td><td style="color:#b4b2a9;font-size:12px;">${ds}</td></tr>`;
+  }).join(''):`<tr><td colspan="4" class="empty">Nenhum lead encontrado</td></tr>`;
+}
+
+function filterTable(){renderLeadsTable(filterByPeriod(rows,periodLeads));}
+
+function renderVendas(){
+  const v=rows.filter(r=>r.etapa==='COMPROU');
+  const all=uniqueLeads(v);
+  const hoje=uniqueLeads(filterByPeriod(v,'dia'));
+  const sem=uniqueLeads(filterByPeriod(v,'semana'));
+  const mes=uniqueLeads(filterByPeriod(v,'mes'));
+  document.getElementById('vendasMetrics').innerHTML=`
+    <div class="mc"><div class="lbl">Vendas hoje</div><div class="val">${hoje.length}</div></div>
+    <div class="mc"><div class="lbl">Vendas esta semana</div><div class="val">${sem.length}</div></div>
+    <div class="mc"><div class="lbl">Vendas este mês</div><div class="val">${mes.length}</div><div class="sub">${all.length} no total</div></div>
+  `;
+  document.getElementById('vendasBody').innerHTML=all.length?[...all].reverse().map(r=>{
+    const d=parseDate(r.data);
+    return `<tr><td style="font-weight:500;">${r.nome}</td><td style="color:#888780;font-size:12px;">${r.telefone||'—'}</td><td style="color:#b4b2a9;font-size:12px;">${d?d.toLocaleDateString('pt-BR'):'—'}</td></tr>`;
+  }).join(''):`<tr><td colspan="3" class="empty">Nenhuma venda registrada. Preencha "COMPROU" na coluna etapa da planilha.</td></tr>`;
+}
+
+loadData();
+setInterval(loadData,60000);
+</script>
+</body>
+</html>
