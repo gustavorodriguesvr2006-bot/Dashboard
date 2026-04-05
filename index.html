@@ -351,6 +351,8 @@ function selectTicket(id){
   document.getElementById(`tbtn-${id}`).classList.add('sel-ticket');
 }
 
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwjYQqaSiOnTXRDJo8pGsPJuJr-BKnvSk67uPMo8P-0Pw0ElqUvk5DTDJ_STra0DC4Zdw/exec';
+
 async function saveVenda(){
   if(!selTicket){alert('Selecione um ticket primeiro!');return;}
   const btn=document.getElementById('saveBtn');
@@ -358,8 +360,18 @@ async function saveVenda(){
   const lead=document.getElementById('leadName').value.trim();
   const today=new Date().toLocaleDateString('pt-BR');
   try{
-    const res=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=VENDAS`);
-    const url=`https://script.google.com/macros/s/AKfycbxPLACEHOLDER/exec`;
+    const payload={
+      data:today,
+      ticket:selTicket.nome,
+      valor:selTicket.valor,
+      lead:lead||''
+    };
+    await fetch(APPS_SCRIPT_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
     vendasRows.push({data:today,ticket:selTicket.nome,valor:selTicket.valor,lead});
     renderVendasTable();
     renderROI();
@@ -368,9 +380,10 @@ async function saveVenda(){
     document.getElementById('leadName').value='';
     selTicket=null;
     document.querySelectorAll('.ticket-btn').forEach(b=>b.classList.remove('sel-ticket'));
-    setTimeout(()=>document.getElementById('successMsg').style.display='none',3000);
-    alert(`Venda registrada! Adicione manualmente na planilha:\nData: ${today}\nTicket: ${selTicket?.nome||''}\nValor: R$ ${fmt(selTicket?.valor||0)}\nLead: ${lead||'—'}`);
-  }catch(e){}
+    setTimeout(()=>document.getElementById('successMsg').style.display='none',4000);
+  }catch(e){
+    alert('Erro ao salvar venda. Tente novamente.');
+  }
   btn.disabled=false;btn.textContent='Registrar venda';
 }
 
