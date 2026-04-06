@@ -245,7 +245,7 @@ async function loadAll(){
   try{
     const [jLeads,jAds,jVendas]=await Promise.all([fetchSheet(API_LEADS),fetchSheet(API_ADS),fetchSheet(API_VENDAS)]);
     leadsRows=(jLeads.table.rows||[]).map(r=>({data:r.c[0]?.v||'',nome:r.c[1]?.v||'',telefone:r.c[2]?.v||'',etapa:(r.c[3]?.v||'').toString().trim().toUpperCase()})).filter(r=>r.nome);
-    adsRows=(jAds.table.rows||[]).map(r=>({data:r.c[0]?.v||'',gasto:parseFloat(r.c[1]?.v||0)||0})).filter(r=>r.data);
+    adsRows=(jAds.table.rows||[]).map(r=>{let d=String(r.c[0]?.v||'');const m=d.match(/Date\((\d+),(\d+),(\d+)/);if(m){const dt=new Date(+m[1],+m[2],+m[3]);d=dt.toISOString().substring(0,10);}return{data:d,gasto:parseFloat(r.c[1]?.v||0)||0};}).filter(r=>r.data);
     vendasRows=(jVendas.table.rows||[]).map(r=>({data:r.c[0]?.v||'',ticket:r.c[1]?.v||'',valor:parseFloat(r.c[2]?.v||0)||0,lead:r.c[3]?.v||''})).filter(r=>r.data);
     document.getElementById('lastUpdate').textContent=`Atualizado ${new Date().toLocaleTimeString('pt-BR')} — ${leadsRows.length} leads`;
     renderAll();
@@ -325,7 +325,7 @@ function renderROI(){
   const gastoData=sortedDays.map(k=>days[k].gasto);
   const receitaData=sortedDays.map(k=>days[k].receita);
   if(charts.roi)charts.roi.destroy();
-  charts.roi=new Chart(document.getElementById('chartROI'),{type:'bar',data:{labels:sortedDays.map(k=>k.substring(5).replace('-','/')),datasets:[{label:'Gasto',data:gastoData,backgroundColor:'#F09595',borderRadius:3,borderSkipped:false},{label:'Receita',data:receitaData,backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780'}},y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780',callback:v=>'R$'+v},beginAtZero:true}}}});
+  charts.roi=new Chart(document.getElementById('chartROI'),{type:'bar',data:{labels:sortedDays.map(k=>{const p=k.substring(0,10);return p.substring(5).replace('-','/');}),datasets:[{label:'Gasto',data:gastoData,backgroundColor:'#F09595',borderRadius:3,borderSkipped:false},{label:'Receita',data:receitaData,backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780'}},y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780',callback:v=>'R$'+v},beginAtZero:true}}}});
   document.getElementById('legendROI').innerHTML=`<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#F09595;display:inline-block;"></span>Gasto Meta Ads</span><span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>Receita vendas</span>`;
 
   document.getElementById('roiTableBody').innerHTML=sortedDays.reverse().map(k=>{
