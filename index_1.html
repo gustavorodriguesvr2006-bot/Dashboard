@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard WhatsApp — Gustavo Rodrigues</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;}
+  .container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+  .header-left h1{font-size:20px;font-weight:600;color:#1a1a1a;}
+  .header-left p{font-size:12px;color:#888780;margin-top:3px;}
+  .refresh-btn{font-size:12px;padding:7px 16px;border-radius:20px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer;font-family:inherit;}
+  .refresh-btn:hover{background:#f1efe8;}
+  .nav{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
+  .ntab{font-size:13px;padding:7px 18px;border-radius:20px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer;font-family:inherit;}
+  .ntab.active{background:#1D9E75;color:#fff;border-color:#1D9E75;font-weight:500;}
+  .section{display:none;}.section.active{display:block;}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+  .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:700px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:repeat(2,1fr);}.g2{grid-template-columns:1fr;}}
+  .mc{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #e8e6e0;}
+  .mc .lbl{font-size:11px;color:#888780;margin-bottom:6px;}
+  .mc .val{font-size:26px;font-weight:600;color:#1a1a1a;line-height:1;}
+  .mc .sub{font-size:11px;color:#b4b2a9;margin-top:5px;}
+  .mc.roi-pos{border-color:#1D9E75;background:#f0faf6;}
+  .mc.roi-neg{border-color:#E24B4A;background:#fff5f5;}
+  .mc.roi-neu{border-color:#EF9F27;background:#fffaf0;}
+  .conv-bar{height:6px;background:#f1efe8;border-radius:3px;overflow:hidden;margin-top:8px;}
+  .conv-fill{height:100%;border-radius:3px;background:#1D9E75;}
+  .card{background:#fff;border:1px solid #e8e6e0;border-radius:12px;padding:16px 20px;margin-bottom:16px;}
+  .card-title{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:14px;}
+  .period-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .ptab{font-size:12px;padding:5px 14px;border-radius:20px;border:1px solid #d3d1c7;background:#fff;color:#5f5e5a;cursor:pointer;font-family:inherit;}
+  .ptab.active{background:#e6f1fb;color:#0c447c;border-color:#b5d4f4;font-weight:500;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{font-size:11px;font-weight:500;color:#888780;text-align:left;padding:0 10px 10px 0;border-bottom:1px solid #e8e6e0;}
+  td{padding:10px 10px 10px 0;border-bottom:1px solid #f1efe8;color:#1a1a1a;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;}
+  .b-green{background:#e1f5ee;color:#085041;}
+  .b-gray{background:#f1efe8;color:#5f5e5a;}
+  .b-amber{background:#faeeda;color:#633806;}
+  .b-red{background:#fcebeb;color:#501313;}
+  .ticket-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px;}
+  @media(max-width:500px){.ticket-grid{grid-template-columns:1fr;}}
+  .ticket-btn{padding:14px;border-radius:10px;border:1.5px solid #e8e6e0;background:#fff;cursor:pointer;font-family:inherit;text-align:left;transition:all .15s;}
+  .ticket-btn:hover{border-color:#1D9E75;background:#f0faf6;}
+  .ticket-btn .t-name{font-size:12px;color:#888780;margin-bottom:4px;}
+  .ticket-btn .t-val{font-size:20px;font-weight:600;color:#1a1a1a;}
+  .ticket-btn .t-desc{font-size:11px;color:#b4b2a9;margin-top:3px;}
+  .sale-form{background:#f5f5f0;border-radius:10px;padding:14px 16px;margin-bottom:16px;}
+  .sale-form input{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d3d1c7;font-size:13px;font-family:inherit;margin-top:6px;margin-bottom:12px;background:#fff;}
+  .sale-form label{font-size:12px;color:#5f5e5a;font-weight:500;}
+  .btn-primary{width:100%;padding:12px;border-radius:10px;border:none;background:#1D9E75;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .btn-primary:hover{background:#0F6E56;}
+  .btn-primary:disabled{background:#9FE1CB;cursor:not-allowed;}
+  .success-msg{background:#e1f5ee;border-radius:8px;padding:10px 14px;font-size:12px;color:#085041;margin-bottom:12px;display:none;}
+  .roi-bar-wrap{height:12px;background:#f1efe8;border-radius:6px;overflow:hidden;margin-top:6px;}
+  .roi-bar-fill{height:100%;border-radius:6px;transition:width .4s;}
+  .tip-box{background:#e1f5ee;border-radius:10px;padding:14px 16px;font-size:12px;color:#085041;line-height:1.6;margin-bottom:16px;}
+  .tip-box strong{font-weight:600;}
+  .error-box{background:#fcebeb;border-radius:10px;padding:14px 16px;font-size:12px;color:#501313;margin-bottom:16px;display:none;}
+  .sel-ticket{border:2px solid #1D9E75 !important;background:#f0faf6 !important;}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-left">
+      <h1>Dashboard WhatsApp</h1>
+      <p id="lastUpdate">Carregando dados...</p>
+    </div>
+    <button class="refresh-btn" onclick="loadAll()">Atualizar</button>
+  </div>
+
+  <div id="errorBox" class="error-box"></div>
+
+  <div class="nav">
+    <button class="ntab active" onclick="showTab('overview',this)">Visão geral</button>
+    <button class="ntab" onclick="showTab('roi',this)">ROI</button>
+    <button class="ntab" onclick="showTab('vendas',this)">Registrar venda</button>
+    <button class="ntab" onclick="showTab('leads',this)">Leads</button>
+  </div>
+
+  <div id="overview" class="section active">
+    <div class="period-tabs">
+      <button class="ptab active" onclick="setPeriod('dia',this)">Hoje</button>
+      <button class="ptab" onclick="setPeriod('semana',this)">Esta semana</button>
+      <button class="ptab" onclick="setPeriod('mes',this)">Este mês</button>
+      <button class="ptab" onclick="setPeriod('total',this)">Total</button>
+    </div>
+    <div class="g4" id="metricsGrid"></div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Leads únicos por dia — últimos 14 dias</div>
+        <div style="position:relative;height:200px;"><canvas id="chartDia"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Leads vs vendas por semana</div>
+        <div style="position:relative;height:200px;"><canvas id="chartLV"></canvas></div>
+        <div id="legendLV" style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:#888780;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="roi" class="section">
+    <div class="period-tabs">
+      <button class="ptab active" onclick="setPeriodROI('dia',this)">Hoje</button>
+      <button class="ptab" onclick="setPeriodROI('semana',this)">Esta semana</button>
+      <button class="ptab" onclick="setPeriodROI('mes',this)">Este mês</button>
+    </div>
+    <div class="g3" id="roiMetrics"></div>
+    <div class="card">
+      <div class="card-title">Gasto Meta Ads vs receita de vendas</div>
+      <div style="position:relative;height:220px;"><canvas id="chartROI"></canvas></div>
+      <div id="legendROI" style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:#888780;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Histórico de gasto diário — Meta Ads</div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Data</th><th>Gasto (R$)</th><th>Vendas (R$)</th><th>ROI</th><th>Resultado</th></tr></thead>
+          <tbody id="roiTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="vendas" class="section">
+    <div class="tip-box">
+      Registre uma venda selecionando o ticket e preenchendo o nome do lead. Os dados são salvos diretamente na planilha.
+    </div>
+    <div class="success-msg" id="successMsg">Venda registrada com sucesso!</div>
+    <div class="card">
+      <div class="card-title">Selecione o ticket</div>
+      <div class="ticket-grid" id="ticketGrid"></div>
+      <div class="sale-form">
+        <label>Nome do lead (opcional)</label>
+        <input type="text" id="leadName" placeholder="Ex: João Silva">
+        <button class="btn-primary" id="saveBtn" onclick="saveVenda()">Registrar venda</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Vendas registradas</div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Data</th><th>Ticket</th><th>Valor</th><th>Lead</th></tr></thead>
+          <tbody id="vendasTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="leads" class="section">
+    <div class="period-tabs">
+      <button class="ptab active" onclick="setPeriodLeads('dia',this)">Hoje</button>
+      <button class="ptab" onclick="setPeriodLeads('semana',this)">Esta semana</button>
+      <button class="ptab" onclick="setPeriodLeads('mes',this)">Este mês</button>
+      <button class="ptab" onclick="setPeriodLeads('total',this)">Todos</button>
+    </div>
+    <div class="g3" id="leadsMetrics"></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin:0;" id="leadsTableTitle">Leads de hoje</div>
+        <input id="searchInput" placeholder="Buscar nome..." style="font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid #d3d1c7;width:180px;outline:none;font-family:inherit;" oninput="filterTable()">
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>Nome</th><th>Telefone</th><th>Etapa</th><th>Data/hora</th></tr></thead>
+          <tbody id="leadsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SHEET_ID='1W979lR1IlfSDZJEQbbC_ZCcK0HSjU6WokIqZjziYEm8';
+const API_LEADS=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=P%C3%A1gina1`;
+const API_ADS=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=META%20ADS`;
+const API_VENDAS=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=VENDAS`;
+const APPEND_URL=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/VENDAS!A:D:append?valueInputOption=USER_ENTERED`;
+
+const TICKETS=[
+  {id:1,nome:'Ticket 1',valor:225.18,desc:'Produto básico'},
+  {id:2,nome:'Ticket 2',valor:340.99,desc:'Produto intermediário'},
+  {id:3,nome:'Ticket 3',valor:422.05,desc:'Produto avançado'},
+  {id:4,nome:'Ticket 4',valor:572.61,desc:'Produto premium'},
+];
+
+let leadsRows=[], adsRows=[], vendasRows=[];
+let period='dia', periodROI='dia', periodLeads='dia';
+let selTicket=null;
+let charts={};
+
+function showTab(id,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function setPeriod(p,btn){period=p;document.querySelectorAll('#overview .period-tabs .ptab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderOverview();}
+function setPeriodROI(p,btn){periodROI=p;document.querySelectorAll('#roi .period-tabs .ptab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderROI();}
+function setPeriodLeads(p,btn){periodLeads=p;document.querySelectorAll('#leads .period-tabs .ptab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderLeads();}
+
+function parseDate(v){
+  if(!v)return null;
+  if(typeof v==='string'){const d=new Date(v);return isNaN(d)?null:d;}
+  const m=String(v).match(/Date\((\d+),(\d+),(\d+)/);
+  if(m)return new Date(+m[1],+m[2],+m[3]);
+  return null;
+}
+function startOf(p){
+  const now=new Date();
+  if(p==='dia'){const d=new Date(now);d.setHours(0,0,0,0);return d;}
+  if(p==='semana'){const d=new Date(now);d.setDate(d.getDate()-d.getDay());d.setHours(0,0,0,0);return d;}
+  if(p==='mes')return new Date(now.getFullYear(),now.getMonth(),1);
+  return new Date(0);
+}
+function filterByPeriod(data,p){
+  if(p==='total')return data;
+  const s=startOf(p);
+  return data.filter(r=>{const d=parseDate(r.data);return d&&d>=s;});
+}
+function uniqueLeads(data){
+  const seen=new Set();
+  return data.filter(r=>{const k=(r.nome||'').toLowerCase().trim();if(!k||seen.has(k))return false;seen.add(k);return true;});
+}
+function fmt(n){return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+async function fetchSheet(url){
+  const res=await fetch(url);
+  const txt=await res.text();
+  return JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+}
+
+async function loadAll(){
+  document.getElementById('lastUpdate').textContent='Atualizando...';
+  try{
+    const [jLeads,jAds,jVendas]=await Promise.all([fetchSheet(API_LEADS),fetchSheet(API_ADS),fetchSheet(API_VENDAS)]);
+    leadsRows=(jLeads.table.rows||[]).map(r=>({data:r.c[0]?.v||'',nome:r.c[1]?.v||'',telefone:r.c[2]?.v||'',etapa:(r.c[3]?.v||'').toString().trim().toUpperCase()})).filter(r=>r.nome);
+    adsRows=(jAds.table.rows||[]).map(r=>{let d=String(r.c[0]?.v||'');const m=d.match(/Date\((\d+),(\d+),(\d+)/);if(m){const dt=new Date(+m[1],+m[2],+m[3]);d=dt.toISOString().substring(0,10);}return{data:d,gasto:parseFloat(r.c[1]?.v||0)||0};}).filter(r=>r.data);
+    vendasRows=(jVendas.table.rows||[]).map(r=>({data:r.c[0]?.v||'',ticket:r.c[1]?.v||'',valor:parseFloat(r.c[2]?.v||0)||0,lead:r.c[3]?.v||''})).filter(r=>r.data);
+    document.getElementById('lastUpdate').textContent=`Atualizado ${new Date().toLocaleTimeString('pt-BR')} — ${leadsRows.length} leads`;
+    renderAll();
+  }catch(e){
+    document.getElementById('lastUpdate').textContent='Erro ao carregar';
+    document.getElementById('errorBox').style.display='block';
+    document.getElementById('errorBox').textContent='Erro ao carregar dados. Verifique se a planilha está pública.';
+  }
+}
+
+function renderAll(){renderOverview();renderROI();renderVendas();renderLeads();buildTicketGrid();}
+
+function renderOverview(){
+  const f=filterByPeriod(leadsRows,period);
+  const u=uniqueLeads(f);
+  const vf=filterByPeriod(vendasRows,period);
+  const receita=vf.reduce((a,b)=>a+b.valor,0);
+  const gastoF=filterByPeriod(adsRows,period);
+  const gasto=gastoF.reduce((a,b)=>a+b.gasto,0);
+  const roi=gasto>0?((receita-gasto)/gasto*100):0;
+  const lbl={dia:'hoje',semana:'esta semana',mes:'este mês',total:'no total'}[period];
+  const roiCls=roi>0?'roi-pos':roi<0?'roi-neg':'roi-neu';
+  document.getElementById('metricsGrid').innerHTML=`
+    <div class="mc"><div class="lbl">Leads ${lbl}</div><div class="val">${u.length}</div><div class="sub">${f.length} mensagens</div></div>
+    <div class="mc"><div class="lbl">Vendas ${lbl}</div><div class="val">${vf.length}</div><div class="sub">R$ ${fmt(receita)}</div></div>
+    <div class="mc"><div class="lbl">Gasto Meta Ads</div><div class="val">R$ ${fmt(gasto)}</div><div class="sub">${lbl}</div></div>
+    <div class="mc ${roiCls}"><div class="lbl">ROI ${lbl}</div><div class="val">${roi>=0?'+':''}${Math.round(roi)}%</div><div class="sub">Receita - Investimento</div></div>
+  `;
+  buildChartDia();
+  buildChartLV();
+}
+
+function buildChartDia(){
+  const now=new Date();
+  const labels=[],data=[];
+  const uniqByDay={};
+  leadsRows.forEach(r=>{const d=parseDate(r.data);if(!d)return;const k=d.toLocaleDateString('pt-BR');if(!uniqByDay[k])uniqByDay[k]=new Set();uniqByDay[k].add((r.nome||'').toLowerCase().trim());});
+  for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);const k=d.toLocaleDateString('pt-BR');labels.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));data.push(uniqByDay[k]?uniqByDay[k].size:0);}
+  if(charts.dia)charts.dia.destroy();
+  charts.dia=new Chart(document.getElementById('chartDia'),{type:'bar',data:{labels,datasets:[{data,backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780',maxRotation:45,maxTicksLimit:7}},y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780'},beginAtZero:true}}}});
+}
+
+function buildChartLV(){
+  const now=new Date();
+  const labels=[],leadsD=[],vendasD=[];
+  for(let i=5;i>=0;i--){
+    const from=new Date(now);from.setDate(from.getDate()-i*7-6);from.setHours(0,0,0,0);
+    const to=new Date(now);to.setDate(to.getDate()-i*7);to.setHours(23,59,59,999);
+    labels.push(from.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}));
+    leadsD.push(uniqueLeads(leadsRows.filter(r=>{const d=parseDate(r.data);return d&&d>=from&&d<=to;})).length);
+    vendasD.push(vendasRows.filter(r=>{const d=parseDate(r.data);return d&&d>=from&&d<=to;}).length);
+  }
+  if(charts.lv)charts.lv.destroy();
+  charts.lv=new Chart(document.getElementById('chartLV'),{type:'bar',data:{labels,datasets:[{label:'Leads',data:leadsD,backgroundColor:'#9FE1CB',borderRadius:3,borderSkipped:false},{label:'Vendas',data:vendasD,backgroundColor:'#085041',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780'}},y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780'},beginAtZero:true}}}});
+  document.getElementById('legendLV').innerHTML=`<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#9FE1CB;display:inline-block;"></span>Leads</span><span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#085041;display:inline-block;"></span>Vendas</span>`;
+}
+
+function renderROI(){
+  const gastoF=filterByPeriod(adsRows,periodROI);
+  const vendasF=filterByPeriod(vendasRows,periodROI);
+  const gasto=gastoF.reduce((a,b)=>a+b.gasto,0);
+  const receita=vendasF.reduce((a,b)=>a+b.valor,0);
+  const lucro=receita-gasto;
+  const roi=gasto>0?((receita-gasto)/gasto*100):0;
+  const lbl={dia:'hoje',semana:'esta semana',mes:'este mês'}[periodROI];
+  const roiCls=roi>0?'roi-pos':roi<0?'roi-neg':'roi-neu';
+  document.getElementById('roiMetrics').innerHTML=`
+    <div class="mc"><div class="lbl">Gasto Meta Ads ${lbl}</div><div class="val">R$ ${fmt(gasto)}</div><div class="sub">investimento em anúncios</div></div>
+    <div class="mc"><div class="lbl">Receita de vendas ${lbl}</div><div class="val">R$ ${fmt(receita)}</div><div class="sub">${vendasF.length} venda(s)</div></div>
+    <div class="mc ${roiCls}"><div class="lbl">ROI ${lbl}</div><div class="val">${roi>=0?'+':''}${Math.round(roi)}%</div><div class="sub">Lucro: R$ ${fmt(lucro)}</div></div>
+  `;
+
+  const days={};
+  adsRows.slice(-14).forEach(r=>{const k=r.data.toString().substring(0,10);if(!days[k])days[k]={gasto:0,receita:0};days[k].gasto+=r.gasto;});
+  vendasRows.forEach(r=>{const d=parseDate(r.data);if(!d)return;const k=d.toISOString().substring(0,10);if(!days[k])days[k]={gasto:0,receita:0};days[k].receita+=r.valor;});
+  const sortedDays=Object.keys(days).sort().slice(-14);
+  const gastoData=sortedDays.map(k=>days[k].gasto);
+  const receitaData=sortedDays.map(k=>days[k].receita);
+  if(charts.roi)charts.roi.destroy();
+  charts.roi=new Chart(document.getElementById('chartROI'),{type:'bar',data:{labels:sortedDays.map(k=>{const p=k.substring(0,10);return p.substring(5).replace('-','/');}),datasets:[{label:'Gasto',data:gastoData,backgroundColor:'#F09595',borderRadius:3,borderSkipped:false},{label:'Receita',data:receitaData,backgroundColor:'#1D9E75',borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#888780'}},y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{font:{size:9},color:'#888780',callback:v=>'R$'+v},beginAtZero:true}}}});
+  document.getElementById('legendROI').innerHTML=`<span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#F09595;display:inline-block;"></span>Gasto Meta Ads</span><span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block;"></span>Receita vendas</span>`;
+
+  document.getElementById('roiTableBody').innerHTML=sortedDays.reverse().map(k=>{
+    const g=days[k].gasto;const r=days[k].receita;const roi2=g>0?Math.round((r-g)/g*100):null;
+    const roiBadge=roi2===null?'<span class="badge b-gray">—</span>':roi2>=0?`<span class="badge b-green">+${roi2}%</span>`:`<span class="badge b-red">${roi2}%</span>`;
+    const result=r-g;
+    return `<tr><td>${k.substring(5).replace('-','/')}</td><td>R$ ${fmt(g)}</td><td>R$ ${fmt(r)}</td><td>${roiBadge}</td><td style="font-weight:500;color:${result>=0?'#085041':'#A32D2D'};">${result>=0?'+':''}R$ ${fmt(result)}</td></tr>`;
+  }).join('');
+}
+
+function buildTicketGrid(){
+  document.getElementById('ticketGrid').innerHTML=TICKETS.map(t=>`
+    <button class="ticket-btn" id="tbtn-${t.id}" onclick="selectTicket(${t.id})">
+      <div class="t-name">${t.nome}</div>
+      <div class="t-val">R$ ${fmt(t.valor)}</div>
+      <div class="t-desc">${t.desc}</div>
+    </button>`).join('');
+}
+
+function selectTicket(id){
+  selTicket=TICKETS.find(t=>t.id===id);
+  document.querySelectorAll('.ticket-btn').forEach(b=>b.classList.remove('sel-ticket'));
+  document.getElementById(`tbtn-${id}`).classList.add('sel-ticket');
+}
+
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbwjYQqaSiOnTXRDJo8pGsPJuJr-BKnvSk67uPMo8P-0Pw0ElqUvk5DTDJ_STra0DC4Zdw/exec';
+
+async function saveVenda(){
+  if(!selTicket){alert('Selecione um ticket primeiro!');return;}
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;btn.textContent='Salvando...';
+  const lead=document.getElementById('leadName').value.trim();
+  const today=new Date().toLocaleDateString('pt-BR');
+  try{
+    const payload={
+      data:today,
+      ticket:selTicket.nome,
+      valor:selTicket.valor,
+      lead:lead||''
+    };
+    await fetch(APPS_SCRIPT_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    vendasRows.push({data:today,ticket:selTicket.nome,valor:selTicket.valor,lead});
+    renderVendasTable();
+    renderROI();
+    renderOverview();
+    document.getElementById('successMsg').style.display='block';
+    document.getElementById('leadName').value='';
+    selTicket=null;
+    document.querySelectorAll('.ticket-btn').forEach(b=>b.classList.remove('sel-ticket'));
+    setTimeout(()=>document.getElementById('successMsg').style.display='none',4000);
+  }catch(e){
+    alert('Erro ao salvar venda. Tente novamente.');
+  }
+  btn.disabled=false;btn.textContent='Registrar venda';
+}
+
+function renderVendas(){renderVendasTable();}
+
+function renderVendasTable(){
+  const rows=[...vendasRows].reverse().slice(0,50);
+  document.getElementById('vendasTableBody').innerHTML=rows.length?rows.map(r=>{
+    const d=parseDate(r.data);
+    const ds=d?d.toLocaleDateString('pt-BR'):(r.data||'—');
+    return `<tr><td>${ds}</td><td><span class="badge b-blue" style="background:#e6f1fb;color:#0c447c;">${r.ticket||'—'}</span></td><td style="font-weight:500;">R$ ${fmt(r.valor)}</td><td style="color:#888780;">${r.lead||'—'}</td></tr>`;
+  }).join(''):`<tr><td colspan="4" style="text-align:center;color:#b4b2a9;padding:1.5rem;">Nenhuma venda registrada ainda.</td></tr>`;
+}
+
+function renderLeads(){
+  const f=filterByPeriod(leadsRows,periodLeads);
+  const u=uniqueLeads(f);
+  const lbl={dia:'hoje',semana:'esta semana',mes:'este mês',total:'total'}[periodLeads];
+  document.getElementById('leadsTableTitle').textContent=`Leads — ${lbl}`;
+  document.getElementById('leadsMetrics').innerHTML=`
+    <div class="mc"><div class="lbl">Leads únicos ${lbl}</div><div class="val">${u.length}</div></div>
+    <div class="mc"><div class="lbl">Mensagens ${lbl}</div><div class="val">${f.length}</div></div>
+    <div class="mc"><div class="lbl">Com etapa definida</div><div class="val">${u.filter(r=>r.etapa).length}</div></div>
+  `;
+  renderLeadsTable(f);
+}
+
+function renderLeadsTable(data){
+  const s=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  const f=s?data.filter(r=>r.nome.toLowerCase().includes(s)):data;
+  const u=uniqueLeads(f).reverse().slice(0,100);
+  document.getElementById('leadsBody').innerHTML=u.length?u.map(r=>{
+    const d=parseDate(r.data);
+    const ds=d?d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—';
+    const badge=r.etapa==='COMPROU'?`<span class="badge b-green">COMPROU</span>`:r.etapa?`<span class="badge b-amber">${r.etapa}</span>`:`<span class="badge b-gray">—</span>`;
+    return `<tr><td style="font-weight:500;">${r.nome}</td><td style="color:#888780;font-size:12px;">${r.telefone||'—'}</td><td>${badge}</td><td style="color:#b4b2a9;font-size:12px;">${ds}</td></tr>`;
+  }).join(''):`<tr><td colspan="4" style="text-align:center;color:#b4b2a9;padding:1.5rem;">Nenhum lead encontrado</td></tr>`;
+}
+
+function filterTable(){renderLeadsTable(filterByPeriod(leadsRows,periodLeads));}
+
+loadAll();
+setInterval(loadAll,60000);
+</script>
+</body>
+</html>
